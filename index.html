@@ -928,8 +928,15 @@ document.getElementById('searchBox').addEventListener('input', applyFilters);
 document.getElementById('refreshBtn').addEventListener('click', loadCandidates);
 
 loadCandidates();
-// Auto-refresh every 60 seconds so new submissions show up automatically
-setInterval(loadCandidates, 60000);
+// Auto-refresh every 3 minutes so new submissions and teammates' changes
+// show up automatically. Skip a cycle if the user is actively editing a
+// field (e.g. picking an interview date/time or typing a comment) so the
+// auto-refresh doesn't wipe the grid mid-edit and undo what they just did.
+setInterval(()=>{
+  const grid = document.getElementById('grid');
+  if(document.activeElement && grid.contains(document.activeElement)) return;
+  loadCandidates();
+}, 180000);
 </script>
 
 </body>
