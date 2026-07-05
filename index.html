@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مراجعة المتقدمين — Content Creator</title>
+<style>
+  :root{
+    --bg: #0F1115;
+    --panel: #171A21;
+    --panel-2: #1D212B;
+    --border: #2A2E38;
+    --text: #ECEEF2;
+    --text-dim: #9AA1AE;
+    --accent: #E8B04B;
+    --accent-soft: rgba(232,176,75,.12);
+    --good: #6FCF97;
+    --warn: #E2A03F;
+    --bad: #E2604B;
+    --radius: 14px;
+    font-family: 'Tajawal', 'Cairo', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Tajawal', sans-serif;
+    padding-bottom: 60px;
+  }
+  header{
+    padding: 32px 24px 20px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top:0;
+    background: rgba(15,17,21,.92);
+    backdrop-filter: blur(10px);
+    z-index: 10;
+  }
+  h1{
+    margin:0 0 4px;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .sub{
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .controls{
+    display:flex;
+    gap:10px;
+    margin-top:16px;
+    flex-wrap: wrap;
+    align-items:center;
+  }
+  select, input[type=text]{
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+  }
+  input[type=text]{ min-width: 200px; }
+  .count-pill{
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-right: auto;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: transform .15s ease, border-color .15s ease;
+    display:flex;
+    flex-direction:column;
+  }
+  .card:hover{
+    border-color: #3A3F4D;
+    transform: translateY(-2px);
+  }
+  .card.out-of-cairo{
+    border-color: rgba(226,96,75,.4);
+    background: linear-gradient(180deg, rgba(226,96,75,.06), var(--panel));
+  }
+  .photo-wrap{
+    width:100%;
+    aspect-ratio: 1/1;
+    background: var(--panel-2);
+    position:relative;
+    overflow:hidden;
+  }
+  .photo-wrap img{
+    width:100%;
+    height:100%;
+    object-fit: cover;
+    display:block;
+  }
+  .photo-fallback{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    height:100%;
+    color: var(--text-dim);
+    font-size:12px;
+    text-align:center;
+    padding: 10px;
+    gap: 10px;
+  }
+  .photo-fallback a{
+    background: var(--accent);
+    color:#1a1300;
+    text-decoration:none;
+    font-weight:800;
+    font-size:12px;
+    padding: 7px 14px;
+    border-radius: 8px;
+  }
+  .view-photo-btn{
+    position:absolute;
+    bottom:10px;
+    left:10px;
+    background: rgba(0,0,0,.7);
+    color:#fff;
+    text-decoration:none;
+    font-size:11px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+    font-weight:700;
+  }
+  .view-photo-btn:hover{ background: rgba(0,0,0,.9); }
+  .location-tag{
+    position:absolute;
+    top:10px;
+    left:10px;
+    background: rgba(0,0,0,.65);
+    color:#fff;
+    font-size:11px;
+    padding: 4px 9px;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+  }
+  .location-tag.far{
+    background: rgba(226,96,75,.85);
+  }
+  .body{
+    padding: 14px 16px 16px;
+    display:flex;
+    flex-direction:column;
+    gap: 10px;
+    flex:1;
+  }
+  .name{
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .role-tag{
+    display:inline-block;
+    font-size: 11px;
+    color: var(--text-dim);
+    background: var(--panel-2);
+    padding: 3px 9px;
+    border-radius: 6px;
+    width: fit-content;
+  }
+  .meta-row{
+    display:flex;
+    justify-content:space-between;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    border-top: 1px dashed var(--border);
+    padding-top: 8px;
+  }
+  .meta-row b{ color: var(--text); font-weight:600; }
+  .salary{
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .links{
+    display:flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .links a{
+    flex:1;
+    text-align:center;
+    text-decoration:none;
+    font-size: 12px;
+    padding: 8px 6px;
+    border-radius: 8px;
+    font-weight: 700;
+    transition: opacity .15s;
+  }
+  .links a:hover{ opacity:.85; }
+  .link-portfolio{
+    background: var(--accent);
+    color: #1a1300;
+  }
+  .link-cv{
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .link-disabled{
+    background: var(--panel-2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    pointer-events:none;
+    opacity: .5;
+  }
+  .exp-pill{
+    font-size:11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight:700;
+    width:fit-content;
+  }
+  .exp-junior{ background: rgba(226,96,75,.15); color: var(--bad); }
+  .exp-mid{ background: rgba(226,160,63,.15); color: var(--warn); }
+  .exp-senior{ background: rgba(111,207,151,.15); color: var(--good); }
+
+  .status-section{
+    border-top: 1px dashed var(--border);
+    padding-top: 10px;
+    margin-top: 4px;
+  }
+  .status-buttons{
+    display:flex;
+    gap:6px;
+    margin-bottom:8px;
+  }
+  .status-btn{
+    flex:1;
+    font-size: 11px;
+    padding: 7px 4px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text-dim);
+    cursor:pointer;
+    font-family: inherit;
+    font-weight: 700;
+    transition: all .15s;
+  }
+  .status-btn:hover{ opacity:.8; }
+  .status-btn.active-accepted{ background: rgba(111,207,151,.18); color: var(--good); border-color: rgba(111,207,151,.4); }
+  .status-btn.active-rejected{ background: rgba(226,96,75,.18); color: var(--bad); border-color: rgba(226,96,75,.4); }
+  .status-btn.active-contacted{ background: rgba(232,176,75,.18); color: var(--accent); border-color: rgba(232,176,75,.4); }
+  .whatsapp-btn{
+    flex:1;
+    text-align:center;
+    text-decoration:none;
+    font-size: 11px;
+    padding: 7px 4px;
+    border-radius: 7px;
+    font-weight: 700;
+    background: rgba(37,211,102,.15);
+    color: #25D366;
+    border: 1px solid rgba(37,211,102,.35);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+  }
+  .whatsapp-btn:hover{ background: rgba(37,211,102,.25); }
+  .whatsapp-btn.disabled{
+    opacity:.4;
+    pointer-events:none;
+    color: var(--text-dim);
+    background: var(--panel-2);
+    border-color: var(--border);
+  }
+
+  .card-status-tag{
+    position:absolute;
+    top:10px;
+    right:10px;
+    font-size:10px;
+    font-weight:800;
+    padding: 4px 10px;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+  }
+  .tag-accepted{ background: rgba(111,207,151,.9); color:#06210f; }
+  .tag-rejected{ background: rgba(226,96,75,.9); color:#2a0805; }
+  .tag-contacted{ background: rgba(232,176,75,.9); color:#2a1c02; }
+
+  .comment-box{
+    width:100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 44px;
+  }
+  .comment-box::placeholder{ color: var(--text-dim); }
+  .comment-save{
+    font-size:11px;
+    color: var(--text-dim);
+    margin-top:4px;
+    display:block;
+    text-align:left;
+    min-height: 14px;
+  }
+  .comment-save.saved{ color: var(--good); }
+
+  .sync-indicator{
+    font-size: 11px;
+    color: var(--text-dim);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .sync-dot{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background: var(--good);
+  }
+
+  .stats-bar{
+    display:flex;
+    gap:10px;
+    padding: 0 24px 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+    flex-wrap:wrap;
+  }
+  .stat-chip{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 12px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .stat-num{ font-weight:800; font-size:14px; }
+  .stat-accepted .stat-num{ color: var(--good); }
+  .stat-rejected .stat-num{ color: var(--bad); }
+  .stat-contacted .stat-num{ color: var(--accent); }
+  .stat-interview .stat-num{ color: #7CB7FF; }
+  .stat-pending .stat-num{ color: var(--text-dim); }
+
+  .star-badge{
+    position:absolute;
+    top:10px;
+    left:10px;
+    font-size: 15px;
+    background: rgba(0,0,0,.55);
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    backdrop-filter: blur(4px);
+  }
+  .salary-warning{
+    font-size: 10px;
+    color: var(--bad);
+    font-weight: 700;
+    margin-right: 6px;
+  }
+  .last-reviewed{
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .interview-fields{
+    display:none;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .interview-fields.show{ display:flex; }
+  .interview-fields input{
+    flex:1;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 8px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .status-btn.active-interview{ background: rgba(124,183,255,.18); color: #7CB7FF; border-color: rgba(124,183,255,.4); }
+  .tag-interview{ background: rgba(124,183,255,.9); color:#041a33; }
+
+  .interview-card{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .interview-card.today{ border-color: rgba(124,183,255,.5); background: linear-gradient(180deg, rgba(124,183,255,.08), var(--panel)); }
+  .iv-name{ font-weight:700; font-size:14px; }
+  .iv-when{ font-size: 13px; color: var(--accent); font-weight:700; }
+  .iv-today-tag{
+    background: rgba(124,183,255,.9);
+    color:#041a33;
+    font-size:10px;
+    font-weight:800;
+    padding:3px 8px;
+    border-radius: 20px;
+    margin-right:8px;
+  }
+
+  footer.note{
+    text-align:center;
+    color: var(--text-dim);
+    font-size: 12px;
+    padding: 30px 20px 10px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>مراجعة المتقدمين — Content Creator</h1>
+  <div class="sub">Evolve Agency · تحديث تلقائي حسب الفلاتر</div>
+  <div class="controls">
+    <select id="filterLocation">
+      <option value="all">كل الأماكن</option>
+      <option value="cairo">القاهرة والجيزة فقط</option>
+      <option value="far">برة القاهرة (مميز بالأحمر)</option>
+    </select>
+    <select id="filterSalary">
+      <option value="all">كل المرتبات</option>
+      <option value="10">لغاية 10,000</option>
+      <option value="12">لغاية 12,000</option>
+      <option value="15">لغاية 15,000</option>
+    </select>
+    <select id="sortBy">
+      <option value="default">الترتيب الافتراضي</option>
+      <option value="salary-asc">المرتب: من الأقل للأعلى</option>
+      <option value="salary-desc">المرتب: من الأعلى للأقل</option>
+    </select>
+    <select id="filterStatus">
+      <option value="all">كل الحالات</option>
+      <option value="accepted">✅ مقبولة</option>
+      <option value="contacted">📞 تم التواصل</option>
+      <option value="interview">🗓️ محدد إنترفيو</option>
+      <option value="rejected">❌ مرفوضة</option>
+      <option value="pending">لسه مراجعة</option>
+    </select>
+    <button id="viewInterviewsBtn" style="background:#7CB7FF;color:#041a33;border:none;padding:9px 16px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">🗓️ مواعيد الإنترفيوهات</button>
+    <input type="text" id="searchBox" placeholder="ابحث بالاسم..." />
+    <button id="refreshBtn" style="background:var(--accent);color:#1a1300;border:none;padding:9px 16px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">🔄 تحديث الآن</button>
+    <span class="count-pill" id="countPill">0 متقدمة</span>
+    <span class="sync-indicator"><span class="sync-dot"></span>متزامن مع الفريق</span>
+  </div>
+</header>
+
+<div class="stats-bar" id="statsBar"></div>
+
+<div id="interviewsView" style="display:none; padding: 0 24px; max-width: 900px; margin: 0 auto;"></div>
+
+<div class="grid" id="grid"></div>
+
+<footer class="note">
+  الصور والبورتفوليوهات مأخوذة من روابط Google Drive و Canva اللي بعتوها المتقدمات — لو رابط مش شغال، جرب تفتحه في المتصفح مباشرة.
+</footer>
+
+<script>
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSYm7A2wveh2fSVDUC_susIaW1gOg883A0ljvE_g-7Bo6B-XkiKLWudodhnBJeATWdDQ7lfRJOiCZcK/pub?output=csv";
+const STATUS_API_URL = "https://script.google.com/macros/s/AKfycbxjQibXkEe4DWESxs3MIb7YbssBmK7IKee9HVVJKELNI9_hJg4hT65XsfGhkDaSXULpdQ/exec";
+
+let candidates = [];
+let statusData = {}; // { name: {status, comment} }
+
+async function loadStatusData(){
+  try{
+    const res = await fetch(STATUS_API_URL + '?t=' + Date.now());
+    if(!res.ok) throw new Error('status fetch failed');
+    statusData = await res.json();
+  } catch(err){
+    console.error('Could not load status data', err);
+    statusData = {};
+  }
+}
+
+async function saveStatus(name, status, comment, interviewDate, interviewTime){
+  const now = new Date().toLocaleString('ar-EG', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  const payload = {
+    name, status, comment,
+    interviewDate: interviewDate || (statusData[name]?.interviewDate || ''),
+    interviewTime: interviewTime || (statusData[name]?.interviewTime || ''),
+    lastReviewed: now
+  };
+  statusData[name] = payload;
+  try{
+    await fetch(STATUS_API_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch(err){
+    console.error('Could not save status', err);
+    return false;
+  }
+}
+
+// Simple CSV parser that handles quoted fields with commas/newlines inside
+function parseCSV(text){
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+
+  for(let i=0; i<text.length; i++){
+    const char = text[i];
+    const next = text[i+1];
+
+    if(inQuotes){
+      if(char === '"' && next === '"'){ field += '"'; i++; }
+      else if(char === '"'){ inQuotes = false; }
+      else{ field += char; }
+    } else {
+      if(char === '"'){ inQuotes = true; }
+      else if(char === ','){ row.push(field); field=''; }
+      else if(char === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else if(char === '\r'){ /* skip */ }
+      else{ field += char; }
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+function extractPhone(contact){
+  if(!contact) return null;
+  // Match Egyptian numbers: 01xxxxxxxxx or +201xxxxxxxxx
+  const match = contact.match(/(\+?20)?0?1[0-9]{9}/);
+  if(!match) return null;
+  let num = match[0].replace(/\D/g,'');
+  if(num.startsWith('20')) num = num.slice(2);
+  if(num.startsWith('0')) num = num.slice(1);
+  return '20' + num; // international format for wa.me
+}
+
+function whatsappLink(contact){
+  const phone = extractPhone(contact);
+  return phone ? `https://wa.me/${phone}` : null;
+}
+
+function guessFar(address){
+  if(!address) return false;
+  const cairoKeywords = ['قاهرة','جيزة','cairo','giza','مصر الجديدة','نصر','مهندسين','هرم','شبرا','مقطم','عباسية','رحاب','شروق','تجمع','زايد','اكتوبر','أكتوبر','معادي','دقي','زمالك','حلوان','وراق','نزهة','قبة','سويس'];
+  const lower = address.toLowerCase();
+  return !cairoKeywords.some(k => lower.includes(k.toLowerCase()));
+}
+
+function normalizeSalary(raw){
+  if(!raw) return {salary:0, note: 'غير محدد'};
+  const cleaned = raw.toString().replace(/[,٬]/g,'').trim();
+  // Try to extract first number (handles "15k", "12000", "15-20k", ranges etc.)
+  const kMatch = cleaned.match(/(\d+(\.\d+)?)\s*k/i);
+  if(kMatch) return {salary: parseFloat(kMatch[1]) * 1000, note: null};
+  const numMatch = cleaned.match(/(\d{3,6})/);
+  if(numMatch) return {salary: parseInt(numMatch[1]), note: null};
+  return {salary: 0, note: raw};
+}
+
+function normalizeExp(raw){
+  if(!raw) return "غير محدد";
+  if(raw.includes('0 - 6') || raw.includes('0-6')) return "0-6 شهور";
+  if(raw.includes('1 - 3') || raw.includes('1-3')) return "1-3 سنين";
+  if(raw.toLowerCase().includes('more')) return "3+ سنين";
+  return raw;
+}
+
+async function loadCandidates(){
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-dim)">جاري تحميل المتقدمين...</div>';
+
+  try{
+    const [res] = await Promise.all([
+      fetch(SHEET_CSV_URL + '&t=' + Date.now()),
+      loadStatusData()
+    ]);
+    if(!res.ok) throw new Error('fetch failed');
+    const text = await res.text();
+    const rows = parseCSV(text);
+    const headers = rows[0].map(h => h.trim());
+
+    const idx = {
+      timestamp: headers.findIndex(h=>h.toLowerCase().includes('timestamp')),
+      position: headers.findIndex(h=>h.toLowerCase().includes('position')),
+      name: headers.findIndex(h=>h.toLowerCase().includes('full name')),
+      contact: headers.findIndex(h=>h.toLowerCase().includes('contact')),
+      address: headers.findIndex(h=>h.toLowerCase().includes('address')),
+      salary: headers.findIndex(h=>h.toLowerCase().includes('salary')),
+      photo: headers.findIndex(h=>h.toLowerCase().includes('photo')),
+      exp: headers.findIndex(h=>h.toLowerCase().includes('experience')),
+      age: headers.findIndex(h=>h.toLowerCase().includes('age')),
+      portfolio: headers.findIndex(h=>h.toLowerCase().includes('portfolio')),
+      cv: headers.findIndex(h=>h.toLowerCase().includes('cv')),
+    };
+
+    candidates = rows.slice(1)
+      .filter(r => r.length > 1 && r[idx.name] && r[idx.name].trim())
+      .map(r=>{
+        const salInfo = normalizeSalary(r[idx.salary]);
+        return {
+          name: r[idx.name]?.trim() || 'بدون اسم',
+          location: r[idx.address]?.trim() || 'غير محدد',
+          far: guessFar(r[idx.address]),
+          salary: salInfo.salary,
+          note: salInfo.note,
+          exp: normalizeExp(r[idx.exp]),
+          age: r[idx.age]?.trim() || '-',
+          photo: r[idx.photo]?.trim() || null,
+          portfolio: r[idx.portfolio]?.trim() || null,
+          contact: r[idx.contact]?.trim() || null,
+          cv: r[idx.cv]?.trim() || null,
+          timestamp: r[idx.timestamp]?.trim() || '',
+        };
+      })
+      .reverse(); // newest first
+
+    applyFilters();
+  } catch(err){
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--bad)">
+      حصل خطأ في تحميل البيانات من الشيت.<br>
+      <span style="font-size:12px;color:var(--text-dim)">تأكد إن اللينك لسه published ومتاح، أو جرب تعمل Refresh للصفحة.</span>
+    </div>`;
+    console.error(err);
+  }
+}
+
+function expLevel(exp){
+  if(exp.includes("0-6")) return {c:"exp-junior", label: exp};
+  if(exp.includes("1-3")) return {c:"exp-mid", label: exp};
+  return {c:"exp-senior", label: exp};
+}
+
+function extractDriveId(url){
+  if(!url) return null;
+  const match = url.match(/id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : null;
+}
+
+function driveThumb(url){
+  const id = extractDriveId(url);
+  if(!id) return null;
+  return `https://lh3.googleusercontent.com/d/${id}=w400`;
+}
+
+function driveDirectLink(url){
+  const id = extractDriveId(url);
+  if(!id) return url;
+  return `https://drive.google.com/file/d/${id}/view`;
+}
+
+function render(list){
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  document.getElementById('countPill').textContent = list.length + ' متقدمة';
+
+  list.forEach((c, i)=>{
+    const exp = expLevel(c.exp);
+    const thumb = driveThumb(c.photo);
+    const directLink = driveDirectLink(c.photo);
+    const cardId = 'card-' + i;
+    const saved = statusData[c.name] || { status: '', comment: '' };
+    const card = document.createElement('div');
+    card.className = 'card' + (c.far ? ' out-of-cairo' : '');
+
+    const statusTagMap = {
+      accepted: '<span class="card-status-tag tag-accepted">مقبولة</span>',
+      rejected: '<span class="card-status-tag tag-rejected">مرفوضة</span>',
+      contacted: '<span class="card-status-tag tag-contacted">تم التواصل</span>',
+      interview: '<span class="card-status-tag tag-interview">🗓️ إنترفيو محدد</span>',
+    };
+
+    const isStrong = c.exp.includes('3+') || (c.salary > 0 && c.salary <= 12000 && !c.exp.includes('0-6'));
+    const overBudget = c.salary > 15000;
+    const waLink = whatsappLink(c.contact);
+
+    card.innerHTML = `
+      <div class="photo-wrap">
+        ${thumb ? `<img src="${thumb}" alt="${c.name}" onerror="this.parentElement.innerHTML='<div class=photo-fallback>الصورة مش قادرة تفتح هنا<br><a href=&quot;${directLink}&quot; target=_blank>افتح الصورة من Drive</a></div>'">` : `<div class="photo-fallback">مفيش لينك صورة<br></div>`}
+        ${c.photo ? `<a class="view-photo-btn" href="${directLink}" target="_blank">🔗 فتح الصورة</a>` : ''}
+        <span class="location-tag ${c.far ? 'far' : ''}">${c.location}</span>
+        ${saved.status ? statusTagMap[saved.status] || '' : ''}
+        ${isStrong ? `<span class="star-badge" title="مرشحة قوية">⭐</span>` : ''}
+      </div>
+      <div class="body">
+        <div class="name">${c.name}</div>
+        <span class="exp-pill ${exp.c}">${exp.label} · ${c.age} سنة</span>
+        <div class="meta-row">
+          <span>المرتب المتوقع</span>
+          <span class="salary">${c.salary > 0 ? c.salary.toLocaleString('en-US') + ' ج' : (c.note || 'غير محدد')}${overBudget ? '<span class="salary-warning">فوق الميزانية</span>' : ''}</span>
+        </div>
+        <div class="links">
+          ${c.portfolio ? `<a class="link-portfolio" href="${c.portfolio}" target="_blank">البورتفوليو</a>` : `<span class="link-disabled">مفيش بورتفوليو</span>`}
+          ${c.cv ? `<a class="link-cv" href="${c.cv}" target="_blank">CV</a>` : ''}
+        </div>
+        <div class="links">
+          ${waLink ? `<a class="whatsapp-btn" href="${waLink}" target="_blank">📱 ابعت واتساب</a>` : `<span class="whatsapp-btn disabled">مفيش رقم واضح</span>`}
+        </div>
+        ${saved.lastReviewed ? `<div class="last-reviewed">آخر مراجعة: ${saved.lastReviewed}</div>` : ''}
+        <div class="status-section">
+          <div class="status-buttons">
+            <button class="status-btn ${saved.status==='accepted'?'active-accepted':''}" data-status="accepted" data-id="${cardId}">✅ مقبولة</button>
+            <button class="status-btn ${saved.status==='contacted'?'active-contacted':''}" data-status="contacted" data-id="${cardId}">📞 تواصلت</button>
+          </div>
+          <div class="status-buttons">
+            <button class="status-btn ${saved.status==='interview'?'active-interview':''}" data-status="interview" data-id="${cardId}">🗓️ حدد إنترفيو</button>
+            <button class="status-btn ${saved.status==='rejected'?'active-rejected':''}" data-status="rejected" data-id="${cardId}">❌ مرفوضة</button>
+          </div>
+          <div class="interview-fields ${saved.status==='interview'?'show':''}" id="iv-fields-${cardId}">
+            <input type="date" id="iv-date-${cardId}" value="${saved.interviewDate || ''}">
+            <input type="time" id="iv-time-${cardId}" value="${saved.interviewTime || ''}">
+          </div>
+          <textarea class="comment-box" id="comment-${cardId}" placeholder="اكتب ملاحظة هنا...">${saved.comment || ''}</textarea>
+          <span class="comment-save" id="save-${cardId}"></span>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+
+    const ivFieldsEl = document.getElementById('iv-fields-' + cardId);
+    const ivDateEl = document.getElementById('iv-date-' + cardId);
+    const ivTimeEl = document.getElementById('iv-time-' + cardId);
+
+    // Wire up status buttons
+    card.querySelectorAll('.status-btn').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const newStatus = btn.dataset.status;
+        const isActive = btn.classList.contains('active-' + newStatus);
+        const finalStatus = isActive ? '' : newStatus; // toggle off if clicked again
+        const comment = document.getElementById('comment-' + cardId).value;
+
+        card.querySelectorAll('.status-btn').forEach(b=>{
+          b.classList.remove('active-accepted','active-contacted','active-rejected','active-interview');
+        });
+        if(finalStatus) btn.classList.add('active-' + finalStatus);
+
+        ivFieldsEl.classList.toggle('show', finalStatus === 'interview');
+
+        const photoWrap = card.querySelector('.photo-wrap');
+        const oldTag = photoWrap.querySelector('.card-status-tag');
+        if(oldTag) oldTag.remove();
+        if(finalStatus && statusTagMap[finalStatus]){
+          photoWrap.insertAdjacentHTML('beforeend', statusTagMap[finalStatus]);
+        }
+
+        const saveLabel = document.getElementById('save-' + cardId);
+        saveLabel.textContent = 'جاري الحفظ...';
+        saveLabel.className = 'comment-save';
+        const ok = await saveStatus(c.name, finalStatus, comment, ivDateEl.value, ivTimeEl.value);
+        saveLabel.textContent = ok ? '✓ اتحفظ للفريق كله' : 'حصل خطأ، حاول تاني';
+        saveLabel.className = 'comment-save' + (ok ? ' saved' : '');
+        renderStats();
+      });
+    });
+
+    // Wire up interview date/time save
+    [ivDateEl, ivTimeEl].forEach(el=>{
+      el.addEventListener('change', async ()=>{
+        const comment = document.getElementById('comment-' + cardId).value;
+        const saveLabel = document.getElementById('save-' + cardId);
+        saveLabel.textContent = 'جاري الحفظ...';
+        saveLabel.className = 'comment-save';
+        const ok = await saveStatus(c.name, 'interview', comment, ivDateEl.value, ivTimeEl.value);
+        saveLabel.textContent = ok ? '✓ اتحفظ للفريق كله' : 'حصل خطأ، حاول تاني';
+        saveLabel.className = 'comment-save' + (ok ? ' saved' : '');
+      });
+    });
+
+    // Wire up comment box (save on blur, i.e. when user clicks away)
+    const commentBox = document.getElementById('comment-' + cardId);
+    commentBox.addEventListener('blur', async ()=>{
+      const activeBtn = card.querySelector('.status-btn.active-accepted, .status-btn.active-contacted, .status-btn.active-rejected, .status-btn.active-interview');
+      const currentStatus = activeBtn ? activeBtn.dataset.status : '';
+      const saveLabel = document.getElementById('save-' + cardId);
+      saveLabel.textContent = 'جاري الحفظ...';
+      saveLabel.className = 'comment-save';
+      const ok = await saveStatus(c.name, currentStatus, commentBox.value, ivDateEl.value, ivTimeEl.value);
+      saveLabel.textContent = ok ? '✓ اتحفظ للفريق كله' : 'حصل خطأ، حاول تاني';
+      saveLabel.className = 'comment-save' + (ok ? ' saved' : '');
+    });
+  });
+}
+
+function applyFilters(){
+  let list = [...candidates];
+
+  const loc = document.getElementById('filterLocation').value;
+  if(loc === 'cairo') list = list.filter(c=>!c.far);
+  if(loc === 'far') list = list.filter(c=>c.far);
+
+  const sal = document.getElementById('filterSalary').value;
+  if(sal !== 'all') list = list.filter(c=> c.salary > 0 && c.salary <= parseInt(sal)*1000);
+
+  const statusFilter = document.getElementById('filterStatus').value;
+  if(statusFilter !== 'all'){
+    if(statusFilter === 'pending'){
+      list = list.filter(c=> !statusData[c.name] || !statusData[c.name].status);
+    } else {
+      list = list.filter(c=> statusData[c.name] && statusData[c.name].status === statusFilter);
+    }
+  }
+
+  const search = document.getElementById('searchBox').value.trim().toLowerCase();
+  if(search) list = list.filter(c=> c.name.toLowerCase().includes(search));
+
+  const sort = document.getElementById('sortBy').value;
+  if(sort === 'salary-asc') list.sort((a,b)=> (a.salary||99999) - (b.salary||99999));
+  if(sort === 'salary-desc') list.sort((a,b)=> (b.salary||0) - (a.salary||0));
+
+  render(list);
+  renderStats();
+}
+
+function renderStats(){
+  const bar = document.getElementById('statsBar');
+  const counts = { accepted:0, contacted:0, interview:0, rejected:0, pending:0 };
+  candidates.forEach(c=>{
+    const s = statusData[c.name]?.status;
+    if(s && counts.hasOwnProperty(s)) counts[s]++;
+    else counts.pending++;
+  });
+  bar.innerHTML = `
+    <div class="stat-chip stat-accepted"><span class="stat-num">${counts.accepted}</span> مقبولة</div>
+    <div class="stat-chip stat-contacted"><span class="stat-num">${counts.contacted}</span> تم التواصل</div>
+    <div class="stat-chip stat-interview"><span class="stat-num">${counts.interview}</span> إنترفيو محدد</div>
+    <div class="stat-chip stat-rejected"><span class="stat-num">${counts.rejected}</span> مرفوضة</div>
+    <div class="stat-chip stat-pending"><span class="stat-num">${counts.pending}</span> لسه مراجعة</div>
+  `;
+}
+
+function renderInterviewsView(){
+  const container = document.getElementById('interviewsView');
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const withInterview = candidates
+    .filter(c => statusData[c.name]?.status === 'interview' && statusData[c.name]?.interviewDate)
+    .map(c => ({ ...c, iv: statusData[c.name] }))
+    .sort((a,b)=> (a.iv.interviewDate + a.iv.interviewTime).localeCompare(b.iv.interviewDate + b.iv.interviewTime));
+
+  if(withInterview.length === 0){
+    container.innerHTML = `<div style="text-align:center;padding:60px;color:var(--text-dim)">مفيش إنترفيوهات محددة لسه. حدد "🗓️ حدد إنترفيو" على أي متقدمة عشان تظهر هنا.</div>`;
+    return;
+  }
+
+  container.innerHTML = withInterview.map(c=>{
+    const isToday = c.iv.interviewDate === todayStr;
+    const dateDisplay = new Date(c.iv.interviewDate).toLocaleDateString('ar-EG', { weekday:'long', day:'numeric', month:'long' });
+    return `
+      <div class="interview-card ${isToday ? 'today' : ''}">
+        <div>
+          <span class="iv-name">${c.name}</span>
+          ${isToday ? '<span class="iv-today-tag">النهاردة</span>' : ''}
+        </div>
+        <div class="iv-when">${dateDisplay} · ${c.iv.interviewTime || '--:--'}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+document.getElementById('viewInterviewsBtn').addEventListener('click', ()=>{
+  const grid = document.getElementById('grid');
+  const statsBar = document.getElementById('statsBar');
+  const ivView = document.getElementById('interviewsView');
+  const isShowing = ivView.style.display !== 'none';
+
+  if(isShowing){
+    ivView.style.display = 'none';
+    grid.style.display = 'grid';
+    statsBar.style.display = 'flex';
+    document.getElementById('viewInterviewsBtn').textContent = '🗓️ مواعيد الإنترفيوهات';
+  } else {
+    renderInterviewsView();
+    ivView.style.display = 'block';
+    grid.style.display = 'none';
+    statsBar.style.display = 'none';
+    document.getElementById('viewInterviewsBtn').textContent = '⬅️ رجوع للقائمة';
+  }
+});
+
+['filterLocation','filterSalary','filterStatus','sortBy'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', applyFilters);
+});
+document.getElementById('searchBox').addEventListener('input', applyFilters);
+document.getElementById('refreshBtn').addEventListener('click', loadCandidates);
+
+loadCandidates();
+// Auto-refresh every 60 seconds so new submissions show up automatically
+setInterval(loadCandidates, 60000);
+</script>
+
+</body>
+</html>
