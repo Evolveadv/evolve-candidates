@@ -438,14 +438,110 @@
     font-size: 12px;
     padding: 30px 20px 10px;
   }
+
+  .dup-warning{
+    display:inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--warn);
+    background: rgba(226,160,63,.15);
+    border: 1px solid rgba(226,160,63,.35);
+    padding: 3px 8px;
+    border-radius: 6px;
+    margin-top: 4px;
+    width: fit-content;
+  }
+  .dup-warning.phone{
+    color: var(--bad);
+    background: rgba(226,96,75,.15);
+    border-color: rgba(226,96,75,.35);
+  }
+
+  .select-check{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:11px;
+    color: var(--text-dim);
+    cursor:pointer;
+    user-select:none;
+  }
+  .select-check input{ cursor:pointer; width:14px; height:14px; }
+  .card.selected{ border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+  .star-rating{
+    display:flex;
+    gap:2px;
+    font-size:16px;
+  }
+  .star-rating span{
+    cursor:pointer;
+    color: var(--border);
+    transition: color .1s;
+  }
+  .star-rating span.filled{ color: var(--accent); }
+  .star-rating span:hover{ color: var(--accent); }
+
+  #lockScreen{
+    position:fixed;
+    inset:0;
+    background: var(--bg);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index: 1000;
+  }
+  .lock-box{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    width: 320px;
+    max-width: 90vw;
+    text-align:center;
+  }
+  .lock-box h2{ margin:0 0 6px; font-size:16px; }
+  .lock-box p{ margin:0 0 16px; color:var(--text-dim); font-size:12px; }
+  .lock-box input{
+    width:100%;
+    margin-bottom:10px;
+    text-align:center;
+  }
+  .lock-box button{
+    width:100%;
+    background: var(--accent);
+    color:#1a1300;
+    border:none;
+    padding:10px;
+    border-radius:8px;
+    font-weight:800;
+    font-size:13px;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .lock-error{ color: var(--bad); font-size:12px; margin-top:8px; min-height:14px; }
 </style>
 </head>
 <body>
 
+<div id="lockScreen" style="display:none">
+  <div class="lock-box">
+    <h2>🔒 مراجعة المتقدمين</h2>
+    <p>الصفحة دي خاصة بفريق Evolve Agency فقط</p>
+    <input type="password" id="lockPassword" placeholder="اكتب كلمة السر">
+    <button id="lockSubmit">دخول</button>
+    <div class="lock-error" id="lockError"></div>
+  </div>
+</div>
+
 <header>
-  <h1>مراجعة المتقدمين — Content Creator</h1>
+  <h1 id="pageTitle">مراجعة المتقدمين</h1>
   <div class="sub">Evolve Agency · تحديث تلقائي حسب الفلاتر</div>
   <div class="controls">
+    <select id="campaignSelect"></select>
+    <select id="filterPosition">
+      <option value="all">كل الوظايف</option>
+    </select>
     <select id="filterLocation">
       <option value="all">كل الأماكن</option>
       <option value="cairo">القاهرة والجيزة فقط</option>
@@ -461,6 +557,7 @@
       <option value="default">الترتيب الافتراضي</option>
       <option value="salary-asc">المرتب: من الأقل للأعلى</option>
       <option value="salary-desc">المرتب: من الأعلى للأقل</option>
+      <option value="rating-desc">التقييم: من الأعلى للأقل</option>
     </select>
     <select id="filterStatus">
       <option value="all">كل الحالات</option>
@@ -473,6 +570,9 @@
     <button id="viewInterviewsBtn" style="background:#7CB7FF;color:#041a33;border:none;padding:9px 16px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">🗓️ مواعيد الإنترفيوهات</button>
     <input type="text" id="searchBox" placeholder="ابحث بالاسم..." />
     <button id="refreshBtn" style="background:var(--accent);color:#1a1300;border:none;padding:9px 16px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">🔄 تحديث الآن</button>
+    <button id="exportBtn" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);padding:9px 16px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">📤 تصدير Excel</button>
+    <button id="reportBtn" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);padding:9px 16px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">📄 عمل تقرير</button>
+    <span class="count-pill" id="selectedPill" style="display:none">0 متحددين</span>
     <span class="count-pill" id="countPill">0 متقدمة</span>
     <span class="sync-indicator"><span class="sync-dot"></span>متزامن مع الفريق</span>
   </div>
@@ -489,15 +589,79 @@
 </footer>
 
 <script>
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSYm7A2wveh2fSVDUC_susIaW1gOg883A0ljvE_g-7Bo6B-XkiKLWudodhnBJeATWdDQ7lfRJOiCZcK/pub?output=csv";
-const STATUS_API_URL = "https://script.google.com/macros/s/AKfycbxjQibXkEe4DWESxs3MIb7YbssBmK7IKee9HVVJKELNI9_hJg4hT65XsfGhkDaSXULpdQ/exec";
+// Simple shared password so a random person with the link can't casually
+// open the page. Not real security (visible in page source to anyone who
+// looks) — it just keeps out accidental/casual visitors.
+const SITE_PASSWORD = "Evolve2026";
+if(localStorage.getItem('evolveAuthed') === 'true'){
+  document.getElementById('lockScreen').style.display = 'none';
+} else {
+  document.getElementById('lockScreen').style.display = 'flex';
+}
+function tryUnlock(){
+  const val = document.getElementById('lockPassword').value;
+  if(val === SITE_PASSWORD){
+    localStorage.setItem('evolveAuthed', 'true');
+    document.getElementById('lockScreen').style.display = 'none';
+  } else {
+    document.getElementById('lockError').textContent = 'كلمة السر غلط، حاول تاني';
+  }
+}
+document.getElementById('lockSubmit').addEventListener('click', tryUnlock);
+document.getElementById('lockPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
+
+// Each hiring campaign (job posting) has its own Google Form -> Sheet -> Apps
+// Script, fully independent from the others. To add a new campaign, add an
+// entry here with its CSV publish link and Apps Script /exec URL — nothing
+// else in the code needs to change.
+const CAMPAIGNS = [
+  {
+    id: 'content-creator',
+    label: 'Content Creator',
+    csvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSYm7A2wveh2fSVDUC_susIaW1gOg883A0ljvE_g-7Bo6B-XkiKLWudodhnBJeATWdDQ7lfRJOiCZcK/pub?output=csv",
+    statusApiUrl: "https://script.google.com/macros/s/AKfycbxjQibXkEe4DWESxs3MIb7YbssBmK7IKee9HVVJKELNI9_hJg4hT65XsfGhkDaSXULpdQ/exec"
+  },
+  // { id: 'sales', label: 'Sales', csvUrl: "...", statusApiUrl: "..." },
+  // { id: 'account-manager', label: 'Account Manager', csvUrl: "...", statusApiUrl: "..." },
+];
+
+const savedCampaignId = localStorage.getItem('activeCampaignId');
+let activeCampaign = CAMPAIGNS.find(c => c.id === savedCampaignId) || CAMPAIGNS[0];
 
 let candidates = [];
 let statusData = {}; // { name: {status, comment} }
+let lastFilteredList = []; // currently visible/filtered candidates, used by export
+let selectedNames = new Set(); // candidates picked for the report generator
+
+function updateSelectedPill(){
+  const pill = document.getElementById('selectedPill');
+  pill.textContent = selectedNames.size + ' متحددين';
+  pill.style.display = selectedNames.size > 0 ? 'flex' : 'none';
+}
+
+function populateCampaignSelect(){
+  const sel = document.getElementById('campaignSelect');
+  sel.innerHTML = CAMPAIGNS.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+  sel.value = activeCampaign.id;
+  document.getElementById('pageTitle').textContent = 'مراجعة المتقدمين — ' + activeCampaign.label;
+}
+
+document.getElementById('campaignSelect').addEventListener('change', (e)=>{
+  activeCampaign = CAMPAIGNS.find(c => c.id === e.target.value) || CAMPAIGNS[0];
+  localStorage.setItem('activeCampaignId', activeCampaign.id);
+  document.getElementById('pageTitle').textContent = 'مراجعة المتقدمين — ' + activeCampaign.label;
+  document.getElementById('searchBox').value = '';
+  ['filterPosition','filterLocation','filterSalary','filterStatus','sortBy'].forEach(id=>{
+    document.getElementById(id).value = id==='sortBy' ? 'default' : 'all';
+  });
+  selectedNames.clear();
+  updateSelectedPill();
+  loadCandidates();
+});
 
 async function loadStatusData(){
   try{
-    const res = await fetch(STATUS_API_URL + '?t=' + Date.now());
+    const res = await fetch(activeCampaign.statusApiUrl + '?t=' + Date.now());
     if(!res.ok) throw new Error('status fetch failed');
     statusData = await res.json();
   } catch(err){
@@ -506,17 +670,18 @@ async function loadStatusData(){
   }
 }
 
-async function saveStatus(name, status, comment, interviewDate, interviewTime){
+async function saveStatus(name, status, comment, interviewDate, rating){
   const now = new Date().toLocaleString('ar-EG', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
   const payload = {
     name, status, comment,
     interviewDate: interviewDate || (statusData[name]?.interviewDate || ''),
-    interviewTime: interviewTime || (statusData[name]?.interviewTime || ''),
+    interviewTime: '',
+    rating: rating !== undefined ? rating : (statusData[name]?.rating || 0),
     lastReviewed: now
   };
   statusData[name] = payload;
   try{
-    await fetch(STATUS_API_URL, {
+    await fetch(activeCampaign.statusApiUrl, {
       method: 'POST',
       body: JSON.stringify(payload)
     });
@@ -528,15 +693,15 @@ async function saveStatus(name, status, comment, interviewDate, interviewTime){
 }
 
 // Collapses rapid successive saves for the same candidate (e.g. clicking
-// "interview" then picking date then time) into one request, so a stale
-// in-flight request can't overwrite a newer one on the sheet.
+// "interview" then picking a date) into one request, so a stale in-flight
+// request can't overwrite a newer one on the sheet.
 const pendingSaves = {};
-function debouncedSaveStatus(name, status, comment, interviewDate, interviewTime, delay=600){
+function debouncedSaveStatus(name, status, comment, interviewDate, rating, delay=600){
   return new Promise(resolve=>{
     if(pendingSaves[name]) clearTimeout(pendingSaves[name]);
     pendingSaves[name] = setTimeout(async ()=>{
       delete pendingSaves[name];
-      resolve(await saveStatus(name, status, comment, interviewDate, interviewTime));
+      resolve(await saveStatus(name, status, comment, interviewDate, rating));
     }, delay);
   });
 }
@@ -616,7 +781,7 @@ async function loadCandidates(){
 
   try{
     const [res] = await Promise.all([
-      fetch(SHEET_CSV_URL + '&t=' + Date.now()),
+      fetch(activeCampaign.csvUrl + '&t=' + Date.now()),
       loadStatusData()
     ]);
     if(!res.ok) throw new Error('fetch failed');
@@ -654,11 +819,30 @@ async function loadCandidates(){
           portfolio: r[idx.portfolio]?.trim() || null,
           contact: r[idx.contact]?.trim() || null,
           cv: r[idx.cv]?.trim() || null,
+          position: r[idx.position]?.trim() || '',
           timestamp: r[idx.timestamp]?.trim() || '',
         };
       })
       .reverse(); // newest first
 
+    // Flag candidates who share the exact same name — the system keys
+    // status/comments by name, so duplicates need a heads-up to avoid
+    // confusing two different people for one.
+    const nameCounts = {};
+    candidates.forEach(c => { nameCounts[c.name] = (nameCounts[c.name] || 0) + 1; });
+    candidates.forEach(c => { c.isDuplicateName = nameCounts[c.name] > 1; });
+
+    // Same idea but by phone number — catches the same person applying
+    // twice under two different names.
+    const phoneCounts = {};
+    candidates.forEach(c => {
+      const phone = extractPhone(c.contact);
+      c.phone = phone;
+      if(phone) phoneCounts[phone] = (phoneCounts[phone] || 0) + 1;
+    });
+    candidates.forEach(c => { c.isDuplicatePhone = c.phone && phoneCounts[c.phone] > 1; });
+
+    populatePositionFilter();
     applyFilters();
   } catch(err){
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--bad)">
@@ -718,6 +902,8 @@ function render(list){
     const overBudget = c.salary > 15000;
     const waLink = whatsappLink(c.contact);
 
+    if(selectedNames.has(c.name)) card.classList.add('selected');
+
     card.innerHTML = `
       <div class="photo-wrap">
         ${thumb ? `<img src="${thumb}" alt="${c.name}" onerror="this.parentElement.innerHTML='<div class=photo-fallback>الصورة مش قادرة تفتح هنا<br><a href=&quot;${directLink}&quot; target=_blank>افتح الصورة من Drive</a></div>'">` : `<div class="photo-fallback">مفيش لينك صورة<br></div>`}
@@ -727,7 +913,11 @@ function render(list){
         ${isStrong ? `<span class="star-badge" title="مرشحة قوية">⭐</span>` : ''}
       </div>
       <div class="body">
+        <label class="select-check"><input type="checkbox" class="select-checkbox" data-id="${cardId}" ${selectedNames.has(c.name)?'checked':''}> اختارها للتقرير</label>
         <div class="name">${c.name}</div>
+        ${c.position ? `<span class="role-tag">${c.position}</span>` : ''}
+        ${c.isDuplicateName ? `<span class="dup-warning" title="في مرشحة تانية بنفس الاسم بالظبط">⚠️ اسم مكرر — راجع التاريخ عشان تفرّق بينهم</span>` : ''}
+        ${c.isDuplicatePhone ? `<span class="dup-warning phone" title="نفس رقم الهاتف مستخدم في طلب تاني">⚠️ نفس الرقم مستخدم في طلب تاني</span>` : ''}
         <span class="exp-pill ${exp.c}">${exp.label} · ${c.age} سنة</span>
         <div class="meta-row">
           <span>المرتب المتوقع</span>
@@ -741,6 +931,9 @@ function render(list){
           ${waLink ? `<a class="whatsapp-btn" href="${waLink}" target="_blank">📱 ابعت واتساب</a>` : `<span class="whatsapp-btn disabled">مفيش رقم واضح</span>`}
         </div>
         ${saved.lastReviewed ? `<div class="last-reviewed">آخر مراجعة: ${saved.lastReviewed}</div>` : ''}
+        <div class="star-rating" id="rating-${cardId}">
+          ${[1,2,3,4,5].map(n=>`<span data-n="${n}" class="${n<=(saved.rating||0)?'filled':''}">★</span>`).join('')}
+        </div>
         <div class="status-section">
           <div class="status-buttons">
             <button class="status-btn ${saved.status==='accepted'?'active-accepted':''}" data-status="accepted" data-id="${cardId}">✅ مقبولة</button>
@@ -752,7 +945,6 @@ function render(list){
           </div>
           <div class="interview-fields ${saved.status==='interview'?'show':''}" id="iv-fields-${cardId}">
             <input type="date" id="iv-date-${cardId}" value="${saved.interviewDate || ''}">
-            <input type="time" id="iv-time-${cardId}" value="${saved.interviewTime || ''}">
           </div>
           <textarea class="comment-box" id="comment-${cardId}" placeholder="اكتب ملاحظة هنا...">${saved.comment || ''}</textarea>
           <span class="comment-save" id="save-${cardId}"></span>
@@ -763,7 +955,26 @@ function render(list){
 
     const ivFieldsEl = document.getElementById('iv-fields-' + cardId);
     const ivDateEl = document.getElementById('iv-date-' + cardId);
-    const ivTimeEl = document.getElementById('iv-time-' + cardId);
+
+    // Wire up selection checkbox (used by the report generator)
+    card.querySelector('.select-checkbox').addEventListener('change', (e)=>{
+      if(e.target.checked){ selectedNames.add(c.name); card.classList.add('selected'); }
+      else { selectedNames.delete(c.name); card.classList.remove('selected'); }
+      updateSelectedPill();
+    });
+
+    // Wire up star rating
+    card.querySelectorAll('.star-rating span').forEach(star=>{
+      star.addEventListener('click', async ()=>{
+        const n = parseInt(star.dataset.n);
+        const ratingEl = document.getElementById('rating-' + cardId);
+        ratingEl.querySelectorAll('span').forEach(s=> s.classList.toggle('filled', parseInt(s.dataset.n) <= n));
+        const comment = document.getElementById('comment-' + cardId).value;
+        const activeBtn = card.querySelector('.status-btn.active-accepted, .status-btn.active-contacted, .status-btn.active-rejected, .status-btn.active-interview');
+        const currentStatus = activeBtn ? activeBtn.dataset.status : '';
+        await debouncedSaveStatus(c.name, currentStatus, comment, ivDateEl.value, n);
+      });
+    });
 
     // Wire up status buttons
     card.querySelectorAll('.status-btn').forEach(btn=>{
@@ -790,24 +1001,22 @@ function render(list){
         const saveLabel = document.getElementById('save-' + cardId);
         saveLabel.textContent = 'جاري الحفظ...';
         saveLabel.className = 'comment-save';
-        const ok = await debouncedSaveStatus(c.name, finalStatus, comment, ivDateEl.value, ivTimeEl.value);
+        const ok = await debouncedSaveStatus(c.name, finalStatus, comment, ivDateEl.value);
         saveLabel.textContent = ok ? '✓ اتحفظ للفريق كله' : 'حصل خطأ، حاول تاني';
         saveLabel.className = 'comment-save' + (ok ? ' saved' : '');
         renderStats();
       });
     });
 
-    // Wire up interview date/time save
-    [ivDateEl, ivTimeEl].forEach(el=>{
-      el.addEventListener('change', async ()=>{
-        const comment = document.getElementById('comment-' + cardId).value;
-        const saveLabel = document.getElementById('save-' + cardId);
-        saveLabel.textContent = 'جاري الحفظ...';
-        saveLabel.className = 'comment-save';
-        const ok = await debouncedSaveStatus(c.name, 'interview', comment, ivDateEl.value, ivTimeEl.value);
-        saveLabel.textContent = ok ? '✓ اتحفظ للفريق كله' : 'حصل خطأ، حاول تاني';
-        saveLabel.className = 'comment-save' + (ok ? ' saved' : '');
-      });
+    // Wire up interview date save
+    ivDateEl.addEventListener('change', async ()=>{
+      const comment = document.getElementById('comment-' + cardId).value;
+      const saveLabel = document.getElementById('save-' + cardId);
+      saveLabel.textContent = 'جاري الحفظ...';
+      saveLabel.className = 'comment-save';
+      const ok = await debouncedSaveStatus(c.name, 'interview', comment, ivDateEl.value);
+      saveLabel.textContent = ok ? '✓ اتحفظ للفريق كله' : 'حصل خطأ، حاول تاني';
+      saveLabel.className = 'comment-save' + (ok ? ' saved' : '');
     });
 
     // Wire up comment box (save on blur, i.e. when user clicks away)
@@ -818,15 +1027,26 @@ function render(list){
       const saveLabel = document.getElementById('save-' + cardId);
       saveLabel.textContent = 'جاري الحفظ...';
       saveLabel.className = 'comment-save';
-      const ok = await debouncedSaveStatus(c.name, currentStatus, commentBox.value, ivDateEl.value, ivTimeEl.value);
+      const ok = await debouncedSaveStatus(c.name, currentStatus, commentBox.value, ivDateEl.value);
       saveLabel.textContent = ok ? '✓ اتحفظ للفريق كله' : 'حصل خطأ، حاول تاني';
       saveLabel.className = 'comment-save' + (ok ? ' saved' : '');
     });
   });
 }
 
+function populatePositionFilter(){
+  const sel = document.getElementById('filterPosition');
+  const current = sel.value || 'all';
+  const positions = [...new Set(candidates.map(c=>c.position).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="all">كل الوظايف</option>' + positions.map(p=>`<option value="${p}">${p}</option>`).join('');
+  sel.value = positions.includes(current) ? current : 'all';
+}
+
 function applyFilters(){
   let list = [...candidates];
+
+  const pos = document.getElementById('filterPosition').value;
+  if(pos !== 'all') list = list.filter(c=> c.position === pos);
 
   const loc = document.getElementById('filterLocation').value;
   if(loc === 'cairo') list = list.filter(c=>!c.far);
@@ -850,9 +1070,155 @@ function applyFilters(){
   const sort = document.getElementById('sortBy').value;
   if(sort === 'salary-asc') list.sort((a,b)=> (a.salary||99999) - (b.salary||99999));
   if(sort === 'salary-desc') list.sort((a,b)=> (b.salary||0) - (a.salary||0));
+  if(sort === 'rating-desc') list.sort((a,b)=> (statusData[b.name]?.rating||0) - (statusData[a.name]?.rating||0));
 
+  lastFilteredList = list;
   render(list);
   renderStats();
+}
+
+function csvEscape(value){
+  const str = (value ?? '').toString();
+  return /[",\n]/.test(str) ? '"' + str.replace(/"/g,'""') + '"' : str;
+}
+
+// Exports whatever is currently shown on screen (respects active filters),
+// so the user can share a shortlist without needing to open the site.
+function exportToExcel(){
+  const headers = ['الاسم','الحالة','المرتب المتوقع','المكان','الخبرة','السن','رقم التواصل','تاريخ الإنترفيو','تعليق','آخر مراجعة'];
+  const statusLabels = { accepted:'مقبولة', rejected:'مرفوضة', contacted:'تم التواصل', interview:'إنترفيو محدد', '':'لسه مراجعة' };
+
+  const rows = lastFilteredList.map(c=>{
+    const saved = statusData[c.name] || {};
+    return [
+      c.name,
+      statusLabels[saved.status || ''] || saved.status || '',
+      c.salary > 0 ? c.salary : (c.note || ''),
+      c.location,
+      c.exp,
+      c.age,
+      c.contact || '',
+      saved.interviewDate || '',
+      saved.comment || '',
+      saved.lastReviewed || ''
+    ].map(csvEscape).join(',');
+  });
+
+  const csv = '﻿' + headers.map(csvEscape).join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `مرشحين-${activeCampaign.label}-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Opens a clean, printable report (in a new tab) for hand-picked candidates
+// — falls back to whatever is currently filtered on screen if nothing was
+// explicitly selected with the checkboxes.
+function generateReport(){
+  const names = selectedNames.size > 0 ? [...selectedNames] : lastFilteredList.map(c=>c.name);
+  const list = candidates.filter(c => names.includes(c.name));
+
+  if(list.length === 0){
+    alert('مفيش مرشحين لعمل تقرير بيهم — اختار مرشح واحد على الأقل أو شيل الفلتر.');
+    return;
+  }
+
+  const statusMeta = {
+    accepted: { label:'مقبولة', color:'#1f9d5a' },
+    rejected: { label:'مرفوضة', color:'#c0392b' },
+    contacted: { label:'تم التواصل', color:'#b8860b' },
+    interview: { label:'إنترفيو محدد', color:'#2b6cb0' },
+    '': { label:'لسه مراجعة', color:'#8a8f98' }
+  };
+
+  const cardsHtml = list.map(c=>{
+    const saved = statusData[c.name] || {};
+    const meta = statusMeta[saved.status || ''] || statusMeta[''];
+    const thumb = driveThumb(c.photo);
+    const stars = '★★★★★'.slice(0, saved.rating||0) + '☆☆☆☆☆'.slice(0, 5-(saved.rating||0));
+    return `
+      <div class="rcard">
+        <div class="rcard-photo">
+          ${thumb ? `<img src="${thumb}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'rcard-noimg',textContent:'الصورة مش متاحة'}))">` : `<div class="rcard-noimg">بدون صورة</div>`}
+        </div>
+        <div class="rcard-body">
+          <div class="rcard-top">
+            <div>
+              <div class="rcard-name">${c.name}</div>
+              ${c.position ? `<div class="rcard-position">${c.position}</div>` : ''}
+            </div>
+            <span class="rcard-status" style="background:${meta.color}">${meta.label}</span>
+          </div>
+          <div class="rcard-stars">${stars}</div>
+          <div class="rcard-grid">
+            <div><b>المرتب المتوقع</b><span>${c.salary > 0 ? c.salary.toLocaleString('en-US') + ' ج' : (c.note || 'غير محدد')}</span></div>
+            <div><b>المكان</b><span>${c.location}</span></div>
+            <div><b>الخبرة</b><span>${c.exp} · ${c.age} سنة</span></div>
+            <div><b>رقم التواصل</b><span>${c.contact || '—'}</span></div>
+            ${saved.interviewDate ? `<div><b>تاريخ الإنترفيو</b><span>${saved.interviewDate}</span></div>` : ''}
+          </div>
+          ${saved.comment ? `<div class="rcard-comment">"${saved.comment}"</div>` : ''}
+          <div class="rcard-links">
+            ${c.portfolio ? `<a href="${c.portfolio}" target="_blank">البورتفوليو</a>` : ''}
+            ${c.cv ? `<a href="${c.cv}" target="_blank">CV</a>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تقرير مرشحين — ${activeCampaign.label}</title>
+<style>
+  body{ font-family: 'Tajawal', 'Segoe UI', sans-serif; background:#f4f5f7; color:#1a1c22; margin:0; padding:32px; }
+  .report-header{ display:flex; justify-content:space-between; align-items:flex-end; border-bottom:3px solid #E8B04B; padding-bottom:16px; margin-bottom:24px; }
+  .report-header h1{ margin:0 0 4px; font-size:22px; }
+  .report-header .sub{ color:#666; font-size:13px; }
+  .report-header .brand{ font-weight:800; color:#E8B04B; font-size:15px; }
+  .rgrid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr)); gap:16px; }
+  .rcard{ background:#fff; border:1px solid #e2e4e9; border-radius:12px; overflow:hidden; display:flex; box-shadow:0 1px 3px rgba(0,0,0,.06); break-inside: avoid; }
+  .rcard-photo{ width:110px; min-width:110px; height:auto; align-self:stretch; background:#eee; overflow:hidden; }
+  .rcard-photo img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .rcard-noimg{ width:100%; height:100%; min-height:110px; display:flex; align-items:center; justify-content:center; color:#999; font-size:11px; text-align:center; padding:8px; box-sizing:border-box; }
+  .rcard-body{ padding:12px 14px; flex:1; }
+  .rcard-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .rcard-name{ font-weight:800; font-size:14.5px; }
+  .rcard-position{ font-size:11px; color:#777; margin-top:2px; }
+  .rcard-status{ color:#fff; font-size:10px; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap; }
+  .rcard-stars{ color:#E8B04B; font-size:13px; margin-top:6px; letter-spacing:1px; }
+  .rcard-grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px 12px; margin-top:10px; font-size:12px; }
+  .rcard-grid div{ display:flex; flex-direction:column; gap:1px; }
+  .rcard-grid b{ color:#999; font-size:10px; font-weight:600; }
+  .rcard-comment{ margin-top:10px; font-size:12px; color:#555; background:#f8f8f8; border-radius:8px; padding:8px 10px; }
+  .rcard-links{ margin-top:10px; display:flex; gap:10px; }
+  .rcard-links a{ font-size:11px; color:#b8860b; font-weight:700; text-decoration:none; }
+  @media print{
+    body{ background:#fff; padding:12px; }
+    .rcard{ box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+  <div class="report-header">
+    <div>
+      <h1>تقرير مرشحين — ${activeCampaign.label}</h1>
+      <div class="sub">${list.length} مرشح · ${new Date().toLocaleDateString('ar-EG', { day:'numeric', month:'long', year:'numeric' })}</div>
+    </div>
+    <div class="brand">Evolve Agency</div>
+  </div>
+  <div class="rgrid">${cardsHtml}</div>
+</body>
+</html>`;
+
+  const reportWindow = window.open('', '_blank');
+  reportWindow.document.write(html);
+  reportWindow.document.close();
 }
 
 function renderStats(){
@@ -879,7 +1245,7 @@ function renderInterviewsView(){
   const withInterview = candidates
     .filter(c => statusData[c.name]?.status === 'interview' && statusData[c.name]?.interviewDate)
     .map(c => ({ ...c, iv: statusData[c.name] }))
-    .sort((a,b)=> (a.iv.interviewDate + a.iv.interviewTime).localeCompare(b.iv.interviewDate + b.iv.interviewTime));
+    .sort((a,b)=> a.iv.interviewDate.localeCompare(b.iv.interviewDate));
 
   if(withInterview.length === 0){
     container.innerHTML = `<div style="text-align:center;padding:60px;color:var(--text-dim)">مفيش إنترفيوهات محددة لسه. حدد "🗓️ حدد إنترفيو" على أي متقدمة عشان تظهر هنا.</div>`;
@@ -895,7 +1261,7 @@ function renderInterviewsView(){
           <span class="iv-name">${c.name}</span>
           ${isToday ? '<span class="iv-today-tag">النهاردة</span>' : ''}
         </div>
-        <div class="iv-when">${dateDisplay} · ${c.iv.interviewTime || '--:--'}</div>
+        <div class="iv-when">${dateDisplay}</div>
       </div>
     `;
   }).join('');
@@ -921,12 +1287,15 @@ document.getElementById('viewInterviewsBtn').addEventListener('click', ()=>{
   }
 });
 
-['filterLocation','filterSalary','filterStatus','sortBy'].forEach(id=>{
+['filterPosition','filterLocation','filterSalary','filterStatus','sortBy'].forEach(id=>{
   document.getElementById(id).addEventListener('change', applyFilters);
 });
 document.getElementById('searchBox').addEventListener('input', applyFilters);
 document.getElementById('refreshBtn').addEventListener('click', loadCandidates);
+document.getElementById('exportBtn').addEventListener('click', exportToExcel);
+document.getElementById('reportBtn').addEventListener('click', generateReport);
 
+populateCampaignSelect();
 loadCandidates();
 // Auto-refresh every 3 minutes so new submissions and teammates' changes
 // show up automatically. Skip a cycle if the user is actively editing a
